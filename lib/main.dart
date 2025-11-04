@@ -6,12 +6,15 @@ import 'package:provider/provider.dart';
 // Importa suas classes e repositórios
 import 'providers/PedidosRepository.dart';
 import 'screens/MainScreen.dart';
-import 'screens/PedidosScreen.dart' hide DetalhePedidoScreen;     // Importa a classe PedidosScreen
-import 'screens/DetalhePedidoScreen.dart'; // Importa a classe DetalhePedidoScreen
+import 'screens/PedidosScreen.dart';
+import 'screens/DetalhePedidoScreen.dart';
 
 
 // O PONTO DE ENTRADA PRINCIPAL: A função main é necessária para rodar o app
 void main() {
+  // Garante que os bindings do Flutter estejam inicializados para que o sqflite/path_provider funcione corretamente
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(
     // Usa ChangeNotifierProvider para injetar a instância única do PedidosRepository
     // na raiz da árvore de widgets, tornando-o acessível a todas as telas
@@ -36,6 +39,7 @@ class CardapioApp extends StatelessWidget {
       ),
 
       // Define a tela que será aberta primeiro
+      // Usamos uma string, pois MainScreen não tem uma constante de rota
       initialRoute: '/',
 
       // Define as rotas nomeadas do aplicativo
@@ -46,10 +50,9 @@ class CardapioApp extends StatelessWidget {
         // Rota para a lista de todos os pedidos
         '/pedidos': (context) => const PedidosScreen(),
 
-        // Rota para os detalhes de um pedido específico
-        '/detalhes_pedido': (context) => const DetalhePedidoScreen(),
+        // Rota de detalhes (usa a constante definida na DetalhePedidoScreen)
+        DetalhePedidoScreen.routeName: (context) => const DetalhePedidoScreen(),
       },
     );
   }
 }
-

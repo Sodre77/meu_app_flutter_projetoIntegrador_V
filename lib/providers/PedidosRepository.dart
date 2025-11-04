@@ -1,50 +1,99 @@
 // providers/PedidosRepository.dart
-import 'package:flutter/foundation.dart'; // Necessário para ChangeNotifier
-import '../models/Pedido.dart'; // Importa a classe Pedido
+import 'package:flutter/foundation.dart';
+import 'package:sqflite/sqflite.dart';
+
+import '../models/Pedido.dart';
+import '../helpers/database_helper.dart'; // Importa o nosso Helper
 
 class PedidosRepository with ChangeNotifier {
-  // Lista privada onde os pedidos são armazenados
-  final List<Pedido> _pedidos = [];
+  // Lista em memória continua sendo a fonte de verdade para a UI
+  List<Pedido> _pedidos = [];
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  // ==========================================================
-  // 1. GETTER CORRIGIDO: Resolve o erro da linha 17 (image_590f1a.png)
-  // Retorna uma cópia da lista de pedidos para que ela não seja alterada externamente
-  // e seja usada para exibição na PedidosScreen.
-  List<Pedido> get pedidosEmAberto => [..._pedidos];
-  // ==========================================================
+  // Flag para saber se os dados já foram carregados
+  bool _isLoading = true;
 
-
-  // Método para adicionar um novo pedido (usado na MainScreen)
-  void adicionarPedido(Pedido pedido) {
-    _pedidos.add(pedido);
-    notifyListeners(); // Avisa a todos os Consumers (incluindo PedidosScreen) para atualizar
+  PedidosRepository() {
+    // Carrega os dados do banco de dados quando o Repositório é criado
+    _loadPedidosFromDatabase();
   }
 
-  // Método para buscar um pedido por ID (usado na DetalhePedidoScreen)
+  // Getter para a lista
+  List<Pedido> get pedidosEmAberto => _pedidos;
+
+  // Getter para verificar se os dados foram carregados
+  bool get isLoading => _isLoading;
+
+
+  // ==========================================================
+  // LÓGICA DE PERSISTÊNCIA (CREATE, READ, UPDATE, DELETE)
+  // ==========================================================
+
+  Future<void> _loadPedidosFromDatabase() async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query('pedidos');
+
+    // Converte a lista de Maps do SQL para a lista de objetos Pedido
+    _pedidos = List.generate(maps.length, (i) {
+      return Pedido.fromMap(maps[i]);
+    });
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // 1. ADICIONAR (CREATE)
+  void adicionarPedido(Pedido pedido) async {
+    final db = await _dbHelper.database;
+
+    // Insere no banco de dados (A linha que estava com erro)
+    await db.insert(
+      'pedidos',
+      pedido.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace, // <--- Agora será reconhecido
+    );
+
+    // Adiciona na lista em memória e notifica
+    _pedidos.add(pedido);
+    notifyListeners();
+  }
+
+  // 2. FINALIZAR (DELETE)
+  void finalizarPedido(String id) async {
+    final db = await _dbHelper.database;
+
+    // Remove do banco de dados
+    await db.delete(
+      'pedidos',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    // Remove da lista em memória e notifica
+    _pedidos.removeWhere((pedido) => pedido.id == id);
+    notifyListeners();
+  }
+
+  // 3. LIMPAR TODOS (DELETE ALL)
+  void limparTodosPedidos() async {
+    final db = await _dbHelper.database;
+
+    // Remove todos os registros do banco
+    await db.delete('pedidos');
+
+    // Limpa a lista em memória e notifica
+    _pedidos.clear();
+    notifyListeners();
+  }
+
+  // 4. VERIFICAÇÃO DE CONTEÚDO (READ BY ID)
+  // Método que será usado na DetalhePedidoScreen
   Pedido? getPedidoById(String id) {
     try {
-      // Busca o pedido que corresponde ao ID
+      // Busca na lista em memória (já carregada do banco)
       return _pedidos.firstWhere((pedido) => pedido.id == id);
     } catch (e) {
-      // Retorna nulo se o pedido não for encontrado
       return null;
     }
   }
-
-  // ==========================================================
-  // 2. MÉTODO CORRIGIDO: Resolve o erro da linha 110 (image_5912e1.png)
-  void finalizarPedido(String id) {
-    // Remove o pedido da lista onde o ID corresponde
-    _pedidos.removeWhere((pedido) => pedido.id == id);
-    notifyListeners(); // Avisa a PedidosScreen que a lista mudou
-  }
-  // ==========================================================
-
-  // ==========================================================
-  // 3. MÉTODO CORRIGIDO: Resolve o erro da linha 29 (image_590fd4.png)
-  void limparTodosPedidos() {
-    _pedidos.clear(); // Limpa toda a lista
-    notifyListeners(); // Avisa a PedidosScreen que a lista mudou (agora vazia)
-  }
-// ==========================================================
 }

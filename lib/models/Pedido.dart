@@ -28,4 +28,31 @@ class Pedido {
     // Formata o valor com duas casas decimais
     return 'R\$ ${valorTotal.toStringAsFixed(2)}';
   }
+  // Mapeia o objeto Pedido para um Map (Formato usado pelo SQLite)
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'numeroMesa': numeroMesa,
+      'itemHamburguerNome': itemHamburguer.nome,
+      'itemHamburguerPreco': itemHamburguer.preco,
+      'itemBebidaNome': itemBebida.nome,
+      'itemBebidaPreco': itemBebida.preco,
+    };
+  }
+
+  // Cria um objeto Pedido a partir de um Map (Lido do SQLite)
+  static Pedido fromMap(Map<String, dynamic> map) {
+    return Pedido(
+      id: map['id'],
+      numeroMesa: map['numeroMesa'],
+      itemHamburguer: Hamburguer(
+        nome: map['itemHamburguerNome'],
+        preco: map['itemHamburguerPreco'],
+      ),
+      itemBebida: Bebida(
+        nome: map['itemBebidaNome'],
+        preco: map['itemBebidaPreco'],
+      ),
+    );
+  }
 }
