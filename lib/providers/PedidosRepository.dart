@@ -87,7 +87,7 @@ class PedidosRepository with ChangeNotifier {
   }
 
   // 4. VERIFICAÇÃO DE CONTEÚDO (READ BY ID)
-  // Método que será usado na DetalhePedidoScreen
+  // metodo sera usado da DetalhePedido
   Pedido? getPedidoById(String id) {
     try {
       // Busca na lista em memória (já carregada do banco)
