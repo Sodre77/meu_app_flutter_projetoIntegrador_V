@@ -1,0 +1,39 @@
+name: cardapio_app
+description: Um aplicativo de cardápio e gestão de pedidos.
+publish_to: 'none' # Impede uploads para pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Pacote para lidar com o SQLite
+  sqflite: ^2.3.0
+
+  # === DEPENDÊNCIA FALTANTE: ESSENCIAL PARA O CAMINHO DO BANCO DE DADOS ===
+  path_provider: ^2.1.1
+
+  # Para gerenciamento de estado (repositório de pedidos)
+  provider: ^6.1.1
+
+  # Para gerar IDs únicos (usado na MainScreen)
+  uuid: ^4.3.3
+
+  # ... outras dependências de produção (se houver) ...
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # Usaremos a versão mais recente dos lints
+  flutter_lints: ^3.0.0
+
+  # ... outras dependências de desenvolvimento (se houver) ...
+
+
+flutter:
+  uses-material-design: true
