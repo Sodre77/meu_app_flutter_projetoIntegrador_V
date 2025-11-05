@@ -1,31 +1,29 @@
 // screens/PedidosScreen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/PedidosRepository.dart';
 import '../models/Pedido.dart';
+import 'DetalhePedidoScreen.dart'; // Importa a tela de detalhes
 
 class PedidosScreen extends StatelessWidget {
   const PedidosScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Usa o Consumer para escutar mudanças no PedidosRepository.
-    // Sempre que notifyListeners() for chamado no Repository, este widget será reconstruído.
     return Consumer<PedidosRepository>(
       builder: (context, pedidosRepository, child) {
         final listaDePedidos = pedidosRepository.pedidosEmAberto;
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Pedidos em Aberto'),
+            title: Text('Pedidos em Aberto (${listaDePedidos.length})'),
             actions: [
-              // Botão para limpar a lista de pedidos (opcional, para testes ou funcionalidade)
               IconButton(
                 icon: const Icon(Icons.delete_sweep),
                 tooltip: 'Limpar todos os pedidos',
                 onPressed: () {
-                  // Chama o método para limpar todos os pedidos do repositório
                   pedidosRepository.limparTodosPedidos();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Todos os pedidos foram removidos!")),
@@ -37,7 +35,7 @@ class PedidosScreen extends StatelessWidget {
           body: listaDePedidos.isEmpty
               ? const Center(
             child: Text(
-              'Nenhum pedido em aberto. Comece na tela principal.',
+              "Nenhum pedido em aberto. Comece a registrar pedidos!",
               style: TextStyle(fontSize: 16, color: Colors.grey),
               textAlign: TextAlign.center,
             ),
@@ -87,7 +85,7 @@ class PedidoCard extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
-          'Total: ${pedido.valorTotalExibicao}', // Usa o getter formatado do Pedido
+          'Total: ${pedido.valorTotalExibicao}',
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -96,9 +94,9 @@ class PedidoCard extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.info_outline, color: Colors.grey),
               onPressed: () {
-                // Navega para a tela de detalhes, passando o ID do pedido
+                // Navega usando a rota estática definida no DetalhePedidoScreen
                 Navigator.of(context).pushNamed(
-                  '/detalhes_pedido',
+                  DetalhePedidoScreen.routeName,
                   arguments: pedido.id,
                 );
               },

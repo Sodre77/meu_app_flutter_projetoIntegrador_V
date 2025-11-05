@@ -5,21 +5,23 @@ import 'package:provider/provider.dart';
 
 // Importa suas classes e repositórios
 import 'providers/PedidosRepository.dart';
+import 'providers/CardapioRepository.dart';
 import 'screens/MainScreen.dart';
 import 'screens/PedidosScreen.dart';
 import 'screens/DetalhePedidoScreen.dart';
+import 'screens/CardapioEditScreen.dart';
 
 
-// O PONTO DE ENTRADA PRINCIPAL: A função main é necessária para rodar o app
 void main() {
-  // Garante que os bindings do Flutter estejam inicializados para que o sqflite/path_provider funcione corretamente
+  // ESSENCIAL para sqflite/path_provider
   WidgetsFlutterBinding.ensureInitialized();
 
   runApp(
-    // Usa ChangeNotifierProvider para injetar a instância única do PedidosRepository
-    // na raiz da árvore de widgets, tornando-o acessível a todas as telas
-    ChangeNotifierProvider(
-      create: (context) => PedidosRepository(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => PedidosRepository()),
+        ChangeNotifierProvider(create: (context) => CardapioRepository()),
+      ],
       child: const CardapioApp(),
     ),
   );
@@ -33,24 +35,18 @@ class CardapioApp extends StatelessWidget {
     return MaterialApp(
       title: 'Cardapio.App',
       theme: ThemeData(
-        // Define a cor primária do aplicativo
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
 
-      // Define a tela que será aberta primeiro
-      // Usamos uma string, pois MainScreen não tem uma constante de rota
       initialRoute: '/',
 
       // Define as rotas nomeadas do aplicativo
       routes: {
-        // Rota principal: Tela de fazer o pedido
         '/': (context) => const MainScreen(),
-
-        // Rota para a lista de todos os pedidos
         '/pedidos': (context) => const PedidosScreen(),
-
-        // Rota de detalhes (usa a constante definida na DetalhePedidoScreen)
+        '/editar_cardapio': (context) => const CardapioEditScreen(),
+        // Usamos a rota estática definida na tela
         DetalhePedidoScreen.routeName: (context) => const DetalhePedidoScreen(),
       },
     );

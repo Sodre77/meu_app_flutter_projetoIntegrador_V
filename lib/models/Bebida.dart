@@ -1,25 +1,29 @@
 // models/Bebida.dart
+
 class Bebida {
   final String nome;
-  final double preco; // CORRIGIDO: Agora é double
+  final double preco;
 
   Bebida({
     required this.nome,
     required this.preco,
   });
 
-  // NOVO: Getter para retornar o preço formatado para exibição (R$ XX.XX)
-  String get precoExibicao => 'R\$ ${preco.toStringAsFixed(2)}';
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-
-    return other is Bebida &&
-        other.nome == nome &&
-        other.preco == preco;
+  // Converte para Map para salvar no SQLite (tabela cardapio_itens)
+  Map<String, dynamic> toMap(String tipo) {
+    return {
+      'nome': nome,
+      'preco': preco,
+      'tipo': tipo, // Deve ser 'Bebida'
+    };
   }
 
-  @override
-  int get hashCode => nome.hashCode ^ preco.hashCode;
+  // Cria o objeto a partir de um Map lido do SQLite
+  static Bebida fromMap(Map<String, dynamic> map) {
+    return Bebida(
+      nome: map['nome'] as String,
+      // Garante que o preço seja um double
+      preco: map['preco'] is int ? (map['preco'] as int).toDouble() : map['preco'] as double,
+    );
+  }
 }

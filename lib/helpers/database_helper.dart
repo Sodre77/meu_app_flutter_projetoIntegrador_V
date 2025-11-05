@@ -1,14 +1,16 @@
 // helpers/database_helper.dart
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
 class DatabaseHelper {
-  // Singleton Pattern: Garante que haja apenas uma instância do banco de dados
-  static final DatabaseHelper _instance = DatabaseHelper._internal();
-  factory DatabaseHelper() => _instance;
-  DatabaseHelper._internal();
+  static const _databaseName = "cardapio.db";
+  static const _databaseVersion = 1;
+
+  // Usa o singleton para garantir que haja apenas uma instância do DB
+  DatabaseHelper._privateConstructor();
+  // INSTÂNCIA CORRETA
+  static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
 
   static Database? _database;
 
@@ -18,29 +20,36 @@ class DatabaseHelper {
     return _database!;
   }
 
-  Future<Database> _initDatabase() async {
-    Directory documentsDirectory = await getApplicationDocumentsDirectory();
-    String path = join(documentsDirectory.path, 'pedidos.db');
-
-    // Abre o banco de dados. Se não existir, ele será criado.
+  _initDatabase() async {
+    String path = join(await getDatabasesPath(), _databaseName);
     return await openDatabase(
       path,
-      version: 1,
+      version: _databaseVersion,
       onCreate: _onCreate,
     );
   }
 
-  // Cria as tabelas do banco de dados
+  // MÉTODO _onCreate: CRIA AS TABELAS ESSENCIAIS
   Future _onCreate(Database db, int version) async {
-    // Tabela de Pedidos
+
+    // 1. Tabela de Pedidos
     await db.execute('''
       CREATE TABLE pedidos (
         id TEXT PRIMARY KEY,
-        numeroMesa TEXT,
-        itemHamburguerNome TEXT,
-        itemHamburguerPreco REAL,
-        itemBebidaNome TEXT,
-        itemBebidaPreco REAL
+        numeroMesa TEXT NOT NULL,
+        hamburguerNome TEXT NOT NULL,
+        hamburguerPreco REAL NOT NULL,
+        bebidaNome TEXT NOT NULL,
+        bebidaPreco REAL NOT NULL
+      )
+    ''');
+
+    // 2. Tabela para Itens de Cardápio
+    await db.execute('''
+      CREATE TABLE cardapio_itens (
+        nome TEXT PRIMARY KEY,
+        preco REAL NOT NULL,
+        tipo TEXT NOT NULL -- 'Hamburguer' ou 'Bebida'
       )
     ''');
   }
