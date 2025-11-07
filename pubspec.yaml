@@ -1,34 +1,42 @@
 # pubspec.yaml
 
 name: seu_nome_do_projeto
-description: Um novo projeto Flutter.
+description: Um novo projeto Flutter para gerenciamento de pedidos e cardápio.
 
-# O resto do seu arquivo, como a versão do SDK
-
+# Se a sua versão do SDK for diferente, ajuste-a aqui.
 environment:
-  sdk: '>=3.0.0 <4.0.0' # Use a versão do SDK que você está usando
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # --- Dependências Essenciais do Projeto ---
+  # --- Dependências de Gerenciamento de Estado e Banco de Dados ---
 
-  # 1. Gerenciamento de Estado
-  provider: ^6.1.1 # Versão estável e atualizada
+  provider: ^6.1.1       # Gerenciamento de Estado
+  sqflite: ^2.3.0        # Banco de Dados SQLite
+  path: ^1.8.3           # Usado pelo sqflite
+  uuid: ^4.2.1           # Geração de IDs únicos (UUID)
 
-  # 2. Banco de Dados SQLite
-  sqflite: ^2.3.0 # Versão estável e atualizada
-  path: ^1.8.3    # Essencial para o sqflite encontrar o caminho do banco de dados
-
-  # 3. Geração de IDs únicos (Usado no Pedido.dart)
-  uuid: ^4.2.1    # Versão estável e atualizada
-
-  # O resto das suas dependências, se houver, deve vir aqui.
+  # Adicione quaisquer outras dependências que você possa ter aqui.
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
 
-# O resto do arquivo, como a seção 'flutter' para assets e fontes
+# Esta seção é CRUCIAL para o Flutter e resolve o problema dos ícones.
+flutter:
+
+  # Esta linha garante que a fonte MaterialIcons seja carregada,
+  # resolvendo o problema dos ícones que não aparecem.
+  uses-material-design: true
+
+  # Se você tiver imagens ou fontes personalizadas, adicione-as aqui:
+  # assets:
+  #   - images/
+
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
