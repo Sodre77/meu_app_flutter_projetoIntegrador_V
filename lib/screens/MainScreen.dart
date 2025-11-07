@@ -9,8 +9,14 @@ import '../providers/CardapioRepository.dart';
 import '../models/Hamburguer.dart';
 import '../models/Bebida.dart';
 import '../models/Pedido.dart';
+import '../models/ItemPedido.dart';
 
+// Variável global para gerar IDs únicos (UUID)
 final Uuid uuid = Uuid();
+
+// =========================================================================
+// WIDGET PRINCIPAL
+// =========================================================================
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -21,25 +27,125 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   final TextEditingController _mesaController = TextEditingController();
-  Hamburguer? _selectedHamburguer;
-  Bebida? _selectedBebida;
 
-  void _selectHamburguer(Hamburguer item) {
-    setState(() {
-      _selectedHamburguer = (_selectedHamburguer != null && _selectedHamburguer!.nome == item.nome) ? null : item;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Hambúrguer: ${item.nome} selecionado.")),
+  // Mapa para funcionar como um carrinho de compras
+  final Map<String, ItemPedido> _carrinho = {};
+
+  double get _valorTotalCarrinho {
+    return _carrinho.values.fold(0.0, (sum, item) => sum + item.subTotal);
+  }
+
+  void _showToast(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
+      );
+    }
+  }
+
+  // Lógica para abrir o modal de quantidade ao clicar no item do cardápio
+  void _updateCarrinho<T>(T item, String tipo) {
+    String nome;
+    double preco;
+
+    if (item is Hamburguer) {
+      nome = item.nome;
+      preco = item.preco;
+    } else if (item is Bebida) {
+      nome = item.nome;
+      preco = item.preco;
+    } else {
+      return;
+    }
+
+    _showQuantityModal(nome, preco, tipo);
+  }
+
+  // =========================================================================
+  // MODAL DE QUANTIDADE
+  // =========================================================================
+
+  void _showQuantityModal(String nome, double preco, String tipo) {
+    int currentQuantity = _carrinho[nome]?.quantidade ?? 0;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            return AlertDialog(
+              title: Text('Quantidade: $nome'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Preço Unitário: R\$ ${preco.toStringAsFixed(2)}'),
+                  const SizedBox(height: 15),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      // Botão para diminuir
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle),
+                        onPressed: currentQuantity > 0 ? () {
+                          setStateModal(() => currentQuantity--);
+                        } : null,
+                      ),
+                      Text(
+                        currentQuantity.toString(),
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      // Botão para aumentar
+                      IconButton(
+                        icon: const Icon(Icons.add_circle),
+                        onPressed: () {
+                          setStateModal(() => currentQuantity++);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text('Subtotal: R\$ ${(preco * currentQuantity).toStringAsFixed(2)}'),
+                ],
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Cancelar'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                TextButton(
+                  child: const Text('Confirmar'),
+                  onPressed: () {
+                    _processQuantityUpdate(nome, preco, tipo, currentQuantity);
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  void _selectBebida(Bebida item) {
+  // =========================================================================
+  // LÓGICA DE ATUALIZAÇÃO DO CARRINHO E SALVAR PEDIDO
+  // =========================================================================
+
+  void _processQuantityUpdate(String nome, double preco, String tipo, int novaQuantidade) {
     setState(() {
-      _selectedBebida = (_selectedBebida != null && _selectedBebida!.nome == item.nome) ? null : item;
+      if (novaQuantidade > 0) {
+        _carrinho[nome] = ItemPedido(
+          nome: nome,
+          preco: preco,
+          quantidade: novaQuantidade,
+          tipo: tipo,
+        );
+        _showToast("$nome: Quantidade atualizada para $novaQuantidade.");
+      } else if (_carrinho.containsKey(nome)) {
+        _carrinho.remove(nome);
+        _showToast("$nome foi removido do pedido.");
+      }
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Bebida: ${item.nome} selecionada.")),
-    );
   }
 
   void _salvarPedidoENavegar() {
@@ -50,56 +156,63 @@ class _MainScreenState extends State<MainScreen> {
       return;
     }
 
-    if (_selectedHamburguer == null || _selectedBebida == null) {
-      _showToast("Selecione um hambúrguer E uma bebida para fechar o pedido.");
+    if (_carrinho.isEmpty) {
+      _showToast("O carrinho está vazio. Adicione itens para fechar o pedido.");
       return;
     }
+
+    final listaItensPedido = _carrinho.values.toList();
 
     final novoPedido = Pedido(
       id: uuid.v4(),
       numeroMesa: mesa,
-      itemHamburguer: _selectedHamburguer!,
-      itemBebida: _selectedBebida!,
+      itens: listaItensPedido,
     );
 
     Provider.of<PedidosRepository>(context, listen: false).adicionarPedido(novoPedido);
+    final totalSalvo = _valorTotalCarrinho;
 
     setState(() {
-      _selectedHamburguer = null;
-      _selectedBebida = null;
+      _carrinho.clear();
       _mesaController.clear();
     });
+
+    _showToast("Pedido da Mesa $mesa registrado! Total: R\$ ${totalSalvo.toStringAsFixed(2)}");
 
     Navigator.of(context).pushNamed('/pedidos');
   }
 
-  void _showToast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
+  // =========================================================================
+  // CONSTRUÇÃO DA INTERFACE
+  // =========================================================================
 
-  Widget _buildHamburguerList(BuildContext context, List<Hamburguer> hamburgueres) {
+  Widget _buildItemList<T>(BuildContext context, String title, List<T> itens, String tipo, Color color) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.all(12.0),
-          child: Text("Hambúrgueres", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         ),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: hamburgueres.length,
+          itemCount: itens.length,
           itemBuilder: (context, index) {
-            final item = hamburgueres[index];
-            final bool isSelected = _selectedHamburguer != null && _selectedHamburguer!.nome == item.nome;
+            final item = itens[index];
+            String nome = (item is Hamburguer) ? item.nome : (item as Bebida).nome;
+            double preco = (item is Hamburguer) ? item.preco : (item as Bebida).preco;
+
+            final int quantidade = _carrinho[nome]?.quantidade ?? 0;
+            final bool isInCart = quantidade > 0;
+
             return ItemCardapio(
-              nome: item.nome,
-              precoExibicao: 'R\$ ${item.preco.toStringAsFixed(2)}',
-              isSelected: isSelected,
-              onTap: () => _selectHamburguer(item),
-              color: Colors.green,
+              nome: nome,
+              precoExibicao: 'R\$ ${preco.toStringAsFixed(2)}',
+              quantidade: quantidade,
+              isInCart: isInCart,
+              onTap: () => _updateCarrinho(item, tipo),
+              color: color,
             );
           },
         ),
@@ -107,31 +220,61 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildBebidasList(BuildContext context, List<Bebida> bebidas) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(12.0),
-          child: Text("Bebidas para Acompanhar", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+  // WIDGET DO RESUMO DO CARRINHO (AGORA ROLÁVEL)
+  Widget _buildCarrinhoSummary(BuildContext context) {
+    final int totalItens = _carrinho.values.fold(0, (sum, item) => sum + item.quantidade);
+    final isCarrinhoVazio = _carrinho.isEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+        decoration: BoxDecoration(
+          color: isCarrinhoVazio ? Colors.grey[200] : Colors.green[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isCarrinhoVazio ? Colors.grey : Colors.green, width: 2),
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
         ),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: bebidas.length,
-          itemBuilder: (context, index) {
-            final item = bebidas[index];
-            final bool isSelected = _selectedBebida != null && _selectedBebida!.nome == item.nome;
-            return ItemCardapio(
-              nome: item.nome,
-              precoExibicao: 'R\$ ${item.preco.toStringAsFixed(2)}',
-              isSelected: isSelected,
-              onTap: () => _selectBebida(item),
-              color: Colors.blue,
-            );
-          },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ITENS: $totalItens',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: isCarrinhoVazio ? Colors.black54 : Colors.black),
+                    ),
+                    Text(
+                      'TOTAL: R\$ ${_valorTotalCarrinho.toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isCarrinhoVazio ? Colors.red : Colors.green.shade800),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Botão para Finalizar Pedido
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isCarrinhoVazio ? null : _salvarPedidoENavegar,
+                icon: const Icon(Icons.send),
+                label: const Text('FINALIZAR PEDIDO', style: TextStyle(fontSize: 16)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -183,7 +326,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
           body: Column(
             children: [
-              // Área do Número da Mesa
+              // Área do Número da Mesa (FICA FIXA)
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Row(
@@ -205,27 +348,25 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
 
-              // Área de Conteúdo Rolável (Cardápio)
+              // Área de Conteúdo Rolável (Cardápio + Resumo do Carrinho)
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      _buildHamburguerList(context, hamburgueres),
+                      _buildItemList<Hamburguer>(context, "Hambúrgueres", hamburgueres, "Hamburguer", Colors.green),
                       const SizedBox(height: 20),
-                      _buildBebidasList(context, bebidas),
-                      const SizedBox(height: 80),
+                      _buildItemList<Bebida>(context, "Bebidas para Acompanhar", bebidas, "Bebida", Colors.blue),
+                      const SizedBox(height: 30),
+
+                      // RESUMO DO CARRINHO AGORA ESTÁ AQUI, DENTRO DA ÁREA ROLÁVEL
+                      _buildCarrinhoSummary(context),
+
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
               ),
             ],
-          ),
-
-          // Botão Flutuante para FINALIZAR O PEDIDO
-          floatingActionButton: FloatingActionButton(
-            onPressed: _salvarPedidoENavegar,
-            tooltip: 'Finalizar Pedido',
-            child: const Icon(Icons.send),
           ),
         );
       },
@@ -234,11 +375,12 @@ class _MainScreenState extends State<MainScreen> {
 }
 
 
-// Widget auxiliar ItemCardapio
+// WIDGET AUXILIAR: ItemCardapio
 class ItemCardapio extends StatelessWidget {
   final String nome;
   final String precoExibicao;
-  final bool isSelected;
+  final int quantidade;
+  final bool isInCart;
   final VoidCallback onTap;
   final Color color;
 
@@ -246,7 +388,8 @@ class ItemCardapio extends StatelessWidget {
     super.key,
     required this.nome,
     required this.precoExibicao,
-    required this.isSelected,
+    required this.quantidade,
+    required this.isInCart,
     required this.onTap,
     required this.color,
   });
@@ -257,8 +400,8 @@ class ItemCardapio extends StatelessWidget {
       onTap: onTap,
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        elevation: 2,
-        color: isSelected ? Colors.lightBlue.shade100 : Colors.white,
+        elevation: isInCart ? 4 : 2,
+        color: isInCart ? color.withOpacity(0.1) : Colors.white,
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Row(
@@ -269,17 +412,48 @@ class ItemCardapio extends StatelessWidget {
                   nome,
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isInCart ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ),
-              Text(
-                precoExibicao,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Ícone de Quantidade
+                  if (isInCart)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Text(
+                        'x$quantidade',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+
+                  const SizedBox(width: 10),
+
+                  // Preço
+                  Text(
+                    precoExibicao,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  // Botão de Ação (Adicionar/Editar)
+                  Icon(
+                    isInCart ? Icons.edit : Icons.add_circle_outline,
+                    color: isInCart ? Colors.grey.shade700 : Colors.grey,
+                  ),
+                ],
               ),
             ],
           ),

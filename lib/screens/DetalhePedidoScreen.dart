@@ -1,9 +1,10 @@
-// screens/DetalhePedidoScreen.dart
+// screens/DetalhePedidoScreen.dart (ATUALIZADO)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/PedidosRepository.dart';
+import '../models/ItemPedido.dart'; // Import necessário
 
 class DetalhePedidoScreen extends StatelessWidget {
   static const routeName = '/detalhes_pedido';
@@ -23,71 +24,72 @@ class DetalhePedidoScreen extends StatelessWidget {
       );
     }
 
+    // Separa os itens por tipo para exibição organizada
+    final List<ItemPedido> hamburgueres = pedido.itens.where((item) => item.tipo == 'Hamburguer').toList();
+    final List<ItemPedido> bebidas = pedido.itens.where((item) => item.tipo == 'Bebida').toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Pedido da Mesa ${pedido.numeroMesa}'),
+        title: Text('Detalhes: Mesa ${pedido.numeroMesa}'),
         backgroundColor: Colors.blueAccent,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text(
-              'Detalhes do Pedido:',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
-            ),
-            const Divider(height: 20, thickness: 2),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    'Itens do Pedido:',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                  ),
+                  const Divider(height: 20, thickness: 2),
 
-            _buildDetailCard(
-              context,
-              title: 'Hambúrguer',
-              items: [
-                'Nome: ${pedido.itemHamburguer.nome}',
-                'Preço: R\$ ${pedido.itemHamburguer.preco.toStringAsFixed(2)}',
-              ],
-              color: Colors.red[100]!,
-            ),
+                  // Exibe a lista de Hambúrgueres
+                  if (hamburgueres.isNotEmpty)
+                    _buildItemListSection(
+                      context,
+                      title: 'Hambúrgueres',
+                      items: hamburgueres,
+                      color: Colors.red[100]!,
+                      icon: Icons.lunch_dining,
+                    ),
 
-            const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-            _buildDetailCard(
-              context,
-              title: 'Bebida',
-              items: [
-                'Nome: ${pedido.itemBebida.nome}',
-                'Preço: R\$ ${pedido.itemBebida.preco.toStringAsFixed(2)}',
-              ],
-              color: Colors.teal[100]!,
-            ),
+                  // Exibe a lista de Bebidas
+                  if (bebidas.isNotEmpty)
+                    _buildItemListSection(
+                      context,
+                      title: 'Bebidas',
+                      items: bebidas,
+                      color: Colors.teal[100]!,
+                      icon: Icons.local_drink,
+                    ),
 
-            const SizedBox(height: 30),
+                  if (hamburgueres.isEmpty && bebidas.isEmpty)
+                    const Center(child: Padding(
+                      padding: EdgeInsets.only(top: 50.0),
+                      child: Text("Pedido sem itens registrados.", style: TextStyle(color: Colors.grey)),
+                    )),
 
-            Center(
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.check_circle_outline),
-                label: const Text('FINALIZAR PEDIDO', style: TextStyle(fontSize: 18)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () {
-                  repository.finalizarPedido(pedido.id);
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Pedido da Mesa ${pedido.numeroMesa} finalizado!'), backgroundColor: Colors.green),
-                  );
-                },
+                  const SizedBox(height: 30),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Rodapé Fixo com Total e Botão de Finalizar
+          _buildTotalFooter(context, pedido.valorTotal, pedido.numeroMesa, pedidoId, repository),
+        ],
       ),
     );
   }
 
-  Widget _buildDetailCard(BuildContext context, {required String title, required List<String> items, required Color color}) {
+  // Widget auxiliar para construir a seção de itens (Hambúrguer ou Bebida)
+  Widget _buildItemListSection(BuildContext context, {required String title, required List<ItemPedido> items, required Color color, required IconData icon}) {
     return Card(
       color: color,
       elevation: 4,
@@ -97,14 +99,80 @@ class DetalhePedidoScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Icon(icon, color: Colors.black87),
+                const SizedBox(width: 8),
+                Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ],
+            ),
             const Divider(height: 10, thickness: 1),
+
             ...items.map((item) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: Text(item, style: const TextStyle(fontSize: 16)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${item.quantidade}x ${item.nome}',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                  Text(
+                    'R\$ ${item.subTotal.toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
             )).toList(),
           ],
         ),
+      ),
+    );
+  }
+
+  // Widget auxiliar para construir o rodapé do total
+  Widget _buildTotalFooter(BuildContext context, double total, String mesa, String pedidoId, PedidosRepository repository) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('TOTAL DO PEDIDO:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(
+                'R\$ ${total.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.check_circle_outline),
+            label: const Text('FINALIZAR PEDIDO', style: TextStyle(fontSize: 18)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              repository.finalizarPedido(pedidoId);
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Pedido da Mesa $mesa finalizado!'), backgroundColor: Colors.green),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

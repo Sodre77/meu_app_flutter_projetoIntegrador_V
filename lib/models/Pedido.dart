@@ -1,64 +1,63 @@
-// models/Pedido.dart
+// models/Pedido.dart (ATUALIZADO)
 
-import 'Bebida.dart';
-import 'Hamburguer.dart';
+import 'dart:convert'; // Necessário para converter List<Map> em String JSON
+import 'ItemPedido.dart';
 
 class Pedido {
   final String id;
   final String numeroMesa;
-  final Hamburguer itemHamburguer;
-  final Bebida itemBebida;
+  final List<ItemPedido> itens;
 
   Pedido({
     required this.id,
     required this.numeroMesa,
-    required this.itemHamburguer,
-    required this.itemBebida,
+    required this.itens,
   });
 
   String get tituloExibicao => 'Pedido Mesa $numeroMesa';
 
   double get valorTotal {
-    return itemHamburguer.preco + itemBebida.preco;
+    return itens.fold(0.0, (sum, item) => sum + item.subTotal);
   }
 
   String get valorTotalExibicao {
     return 'R\$ ${valorTotal.toStringAsFixed(2)}';
   }
 
-  // Mapeia o objeto Pedido para um Map (Chaves sincronizadas com database_helper)
+  // =========================================================================
+  // MÉTODOS DE SERIALIZAÇÃO PARA SQLite
+  // =========================================================================
+
   Map<String, dynamic> toMap() {
+    // Converte a lista de ItemPedido em uma lista de Map
+    final List<Map<String, dynamic>> itensMapList =
+    itens.map((item) => item.toMap()).toList();
+
+    // Converte a lista de Map em uma String JSON para salvar no SQLite
+    final String itensJson = json.encode(itensMapList);
+
     return {
       'id': id,
       'numeroMesa': numeroMesa,
-      // Chaves corretas (hamburguerNome/Preco, bebidaNome/Preco)
-      'hamburguerNome': itemHamburguer.nome,
-      'hamburguerPreco': itemHamburguer.preco,
-      'bebidaNome': itemBebida.nome,
-      'bebidaPreco': itemBebida.preco,
+      'itensJson': itensJson, // Novo campo para armazenar a lista de itens
     };
   }
 
-  // Cria um objeto Pedido a partir de um Map (Lido do SQLite)
   static Pedido fromMap(Map<String, dynamic> map) {
-    // Função auxiliar para desserializar com segurança (evita erros int/double)
-    double safeDouble(dynamic value) {
-      if (value is int) return value.toDouble();
-      if (value is double) return value;
-      return 0.0;
-    }
+    // Pega a string JSON do banco de dados
+    final String itensJson = map['itensJson'] as String;
+
+    // Converte a string JSON de volta para List<Map<String, dynamic>>
+    final List<dynamic> itensMapList = json.decode(itensJson);
+
+    // Converte a lista de Map de volta para List<ItemPedido>
+    final List<ItemPedido> itensList =
+    itensMapList.map((map) => ItemPedido.fromMap(map as Map<String, dynamic>)).toList();
 
     return Pedido(
       id: map['id'] as String,
       numeroMesa: map['numeroMesa'] as String,
-      itemHamburguer: Hamburguer(
-        nome: map['hamburguerNome'] as String,
-        preco: safeDouble(map['hamburguerPreco']),
-      ),
-      itemBebida: Bebida(
-        nome: map['bebidaNome'] as String,
-        preco: safeDouble(map['bebidaPreco']),
-      ),
+      itens: itensList,
     );
   }
 }

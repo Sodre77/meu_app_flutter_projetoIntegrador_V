@@ -1,15 +1,17 @@
-// helpers/database_helper.dart
+// helpers/database_helper.dart (ATUALIZADO PARA SUPORTAR MULTI-ITENS NO PEDIDO)
 
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class DatabaseHelper {
+  // Nome e Versão do Banco de Dados
   static const _databaseName = "cardapio.db";
   static const _databaseVersion = 1;
 
-  // Usa o singleton para garantir que haja apenas uma instância do DB
+  // =========================================================================
+  // SINGLETON PATTERN (Garante apenas uma instância do banco de dados)
+  // =========================================================================
   DatabaseHelper._privateConstructor();
-  // INSTÂNCIA CORRETA
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
 
   static Database? _database;
@@ -29,22 +31,22 @@ class DatabaseHelper {
     );
   }
 
-  // MÉTODO _onCreate: CRIA AS TABELAS ESSENCIAIS
+  // =========================================================================
+  // CRIAÇÃO DE TABELAS (ATUALIZADA)
+  // =========================================================================
   Future _onCreate(Database db, int version) async {
-
     // 1. Tabela de Pedidos
+    // Foi alterada para armazenar todos os itens do pedido como uma String JSON (itensJson)
     await db.execute('''
       CREATE TABLE pedidos (
         id TEXT PRIMARY KEY,
         numeroMesa TEXT NOT NULL,
-        hamburguerNome TEXT NOT NULL,
-        hamburguerPreco REAL NOT NULL,
-        bebidaNome TEXT NOT NULL,
-        bebidaPreco REAL NOT NULL
+        itensJson TEXT NOT NULL  -- NOVO CAMPO: Armazena a lista de ItemPedido serializada
       )
     ''');
 
-    // 2. Tabela para Itens de Cardápio
+    // 2. Tabela para Itens de Cardápio (MANTIDA)
+    // Armazena a lista base de hambúrgueres e bebidas
     await db.execute('''
       CREATE TABLE cardapio_itens (
         nome TEXT PRIMARY KEY,
