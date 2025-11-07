@@ -1,39 +1,34 @@
-name: cardapio_app
-description: Um aplicativo de cardápio e gestão de pedidos.
-publish_to: 'none' # Impede uploads para pub.dev
+# pubspec.yaml
 
-version: 1.0.0+1
+name: seu_nome_do_projeto
+description: Um novo projeto Flutter.
+
+# O resto do seu arquivo, como a versão do SDK
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0' # Use a versão do SDK que você está usando
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # Pacote para lidar com o SQLite
-  sqflite: ^2.3.0
+  # --- Dependências Essenciais do Projeto ---
 
-  # === DEPENDÊNCIA FALTANTE: ESSENCIAL PARA O CAMINHO DO BANCO DE DADOS ===
-  path_provider: ^2.1.1
+  # 1. Gerenciamento de Estado
+  provider: ^6.1.1 # Versão estável e atualizada
 
-  # Para gerenciamento de estado (repositório de pedidos)
-  provider: ^6.1.1
+  # 2. Banco de Dados SQLite
+  sqflite: ^2.3.0 # Versão estável e atualizada
+  path: ^1.8.3    # Essencial para o sqflite encontrar o caminho do banco de dados
 
-  # Para gerar IDs únicos (usado na MainScreen)
-  uuid: ^4.3.3
+  # 3. Geração de IDs únicos (Usado no Pedido.dart)
+  uuid: ^4.2.1    # Versão estável e atualizada
 
-  # ... outras dependências de produção (se houver) ...
-
+  # O resto das suas dependências, se houver, deve vir aqui.
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  # Usaremos a versão mais recente dos lints
-  flutter_lints: ^3.0.0
+  flutter_lints: ^2.0.0
 
-  # ... outras dependências de desenvolvimento (se houver) ...
-
-
-flutter:
-  uses-material-design: true
+# O resto do arquivo, como a seção 'flutter' para assets e fontes
